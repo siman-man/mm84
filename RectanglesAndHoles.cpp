@@ -20,6 +20,12 @@ typedef long long ll;
 const int UNKNOWN = -1;
 const int OBSTACLE = -2;
 
+const int MAX_N = 1000;
+const int MAX_SIZE = 1000000;
+
+const int DX[4] = { -1, 1, 0, 0 };
+const int DY[4] = { 0, 0, -1, 1 };
+
 unsigned long long xor128() {
   static unsigned long long rx=123456789, ry=362436069, rz=521288629, rw=88675123;
   unsigned long long rt = (rx ^ (rx<<11));
@@ -27,36 +33,174 @@ unsigned long long xor128() {
   return (rw=(rw^(rw>>19))^(rt^(rt>>8)));
 }
 
+int LY[MAX_N];
+int LX[MAX_N];
+int RY[MAX_N];
+int RX[MAX_N];
+
+struct fieldInfo {
+  int ly[MAX_N];
+  int lx[MAX_N];
+  int ry[MAX_N];
+  int rx[MAX_N];
+  int eval;
+
+  bool operator >(const fieldInfo &e) const{
+    return eval > e.eval;
+  }    
+};
+
+struct rect_t {
+  rect_t(short h = -1, short w = -1){
+    height = h;
+    width = w;
+  }
+
+  short height;
+  short width;
+
+  bool operator<(const rect_t &e) const {
+    return height*width > e.height*e.width;
+  }
+};
+
+int N, turn;
+
+vector<rect_t> rect_list(MAX_N);
+
 class RectanglesAndHoles {
   public:
-    vector<int> place( vector<int> A, vector<int> B ){
-      int n = A.size();
-      vector<int> ret(3*n);
 
-      for(int i = 0; i < 3*n; i++){
-        ret[i*3] = xor128() % 400000;
-        ret[i*3+1] = xor128() % 400000;
+    /*
+     * A = height, B = width.
+     */
+    vector<int> place( vector<int> A, vector<int> B ){
+      N = A.size();
+      vector<int> ret(3*N);
+
+      init( A, B );
+
+      for(int i = 0; i < 3*N; i++){
+        ret[i*3] = xor128() % 1000000 * ( xor128()%2 )? -1 : 1;
+        ret[i*3+1] = xor128() % 1000000 * ( xor128()%2 )? -1 : 1;
         ret[i*3+2] = 0;
+
+        LY[i] = ret[i*3];
+        LX[i] = ret[i*3];
+        RY[i] = LY[i] + ( ret[i*3+2] )? A[i] : B[i];
+        RX[i] = LX[i] + ( ret[i*3+2] )? B[i] : A[i];
       }
+ 
+      for(int i = 0; i < N; i++){
+        rect_t rect = rect_list[i];
+        fprintf( stderr, "id = %d: height = %d, width = %d, area = %d\n",
+            i, rect.height, rect.width, rect.width * rect.height );
+      }
+      fprintf( stderr, "N = %d\n", N );
+      calcScore();
 
       return ret;
     };
 
-    int calcScore( vector<int> LX, vector<int> RX, vector<int> LY, vector<int> RY ){
-      vector<int> XS = enumerateCoordinates( LX, RX );
-      vector<int> YS = enumerateCoordinates( LY, RY );
+    void init( vector<int> &A, vector<int> &B ){
+      turn = 0;
 
-      int map[XS.size()-1][YS.size()-1];
+      memset( LY, -1, sizeof(LY) );
+      memset( LX, -1, sizeof(LX) );
+      memset( RY, -1, sizeof(RY) );
+      memset( RX, -1, sizeof(RX) );
+
+      for(int i = 0; i < N; i++){
+        rect_list[i] = rect_t(A[i], B[i]);
+      }
+
+      sort( rect_list.begin(), rect_list.begin()+N );
     }
 
-    vector<int> enumerateCoordinates( vector<int> A, vector<int> B ){
+    bool overlap( int y, int x, int rot ){
+    }
+
+    ll calcScore(){
+      vector<int> YS = enumerateCoordinates( LY, RY );
+      vector<int> XS = enumerateCoordinates( LX, RX );
+
+      int field[YS.size()-1][XS.size()-1];
+
+      memset( field, UNKNOWN, sizeof(field) );
+      int ysize = YS.size();
+      int xsize = XS.size();
+
+      int cells = (ysize-1) * (xsize-1);
+
+      int compCnt = 0;
+
+      int QX[cells];
+      int QY[cells];
+
+      int qBeg = 0, qEnd = 0;
+
+      for(int y = 0; y < ysize-1; y++){
+        for(int x = 0; x < xsize-1; x++){
+          if( field[y][x] == UNKNOWN ){
+            QX[qBeg] = x;
+            QY[qBeg++] = y;
+            field[y][x] = compCnt;
+
+            while( qEnd < qBeg ){
+              int curX = QX[qEnd];
+              int curY = QY[qEnd++];
+
+              for(int d = 0; d < 4; d++){
+                int nextX = curX + DX[d];
+                int nextY = curY + DY[d];
+
+                if( nextY >= 0 && nextY < ysize && nextX >= 0 && nextY < xsize && field[nextY][nextX] == UNKNOWN ){
+                  QX[qBeg] = nextX;
+                  QY[qBeg++] = nextY;
+                  field[nextY][nextX] = compCnt;
+                }
+              }
+            }
+
+            compCnt++;
+          }
+        }
+      }
+
+      ll totArea = 0;
+
+      for(int y = 0; y < ysize; y++){
+        for(int x = 0; x < xsize; x++){
+          if( field[y][x] > 0 ){
+            totArea += (XS[x+1]-XS[x]) * (YS[y+1]-YS[y]);
+          }
+        }
+      }
+
+      compCnt--;
+
+      fprintf( stderr, "compCnt = %d\n", compCnt );
+      fprintf( stderr, "totArea = %d\n", totArea );
+      fprintf( stderr, "Current Score = %lld\n", totArea * compCnt * compCnt );
+
+      return totArea * compCnt * compCnt;
+    }
+
+    void setRect( int id, int y, int x, int rot ){
+      LY[id] = y;
+      LX[id] = x;
+      RY[id] = y + ( rot )? rect_list[id].height : rect_list[id].width;
+      RX[id] = y + ( rot )? rect_list[id].width : rect_list[id].height;
+    }
+
+    vector<int> enumerateCoordinates( int *A, int *B ){
       int min_value = INT_MAX;
       int max_value = INT_MIN;
-      int size = A.size();
+      int size = turn;
 
       set<int> coords;
 
-      for(int i = 0; i < size; i++){
+      for(int i = 0; i <= size; i++){
         max_value = max( max_value, max( A[i], B[i] ) );
         min_value = min( min_value, min( A[i], B[i] ) );
 
@@ -65,7 +209,7 @@ class RectanglesAndHoles {
       }
 
       set<int>::iterator it = coords.begin();
-      
+
       vector<int> res;
 
       while( it != coords.end() ){
