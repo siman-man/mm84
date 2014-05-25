@@ -21,7 +21,6 @@ const int UNKNOWN = -1;
 const int OBSTACLE = -2;
 
 const int MAX_N = 1000;
-const int MAX_SIZE = 1000000;
 
 const int DX[4] = { -1, 1, 0, 0 };
 const int DY[4] = { 0, 0, -1, 1 };
@@ -51,11 +50,13 @@ struct fieldInfo {
 };
 
 struct rect_t {
-  rect_t(short h = -1, short w = -1){
+  rect_t(short i = -1, short h = -1, short w = -1){
+    id = i;
     height = h;
     width = w;
   }
 
+  short id;
   short height;
   short width;
 
@@ -64,7 +65,7 @@ struct rect_t {
   }
 };
 
-int N, turn;
+int N, setCnt;
 
 vector<rect_t> rect_list(MAX_N);
 
@@ -91,11 +92,13 @@ class RectanglesAndHoles {
         RX[i] = LX[i] + ( ret[i*3+2] )? B[i] : A[i];
       }
  
+      /*
       for(int i = 0; i < N; i++){
         rect_t rect = rect_list[i];
         fprintf( stderr, "id = %d: height = %d, width = %d, area = %d\n",
-            i, rect.height, rect.width, rect.width * rect.height );
+            rect.id, rect.height, rect.width, rect.width * rect.height );
       }
+      */
       fprintf( stderr, "N = %d\n", N );
       calcScore();
 
@@ -103,7 +106,7 @@ class RectanglesAndHoles {
     };
 
     void init( vector<int> &A, vector<int> &B ){
-      turn = 0;
+      setCnt = 0;
 
       memset( LY, -1, sizeof(LY) );
       memset( LX, -1, sizeof(LX) );
@@ -111,14 +114,12 @@ class RectanglesAndHoles {
       memset( RX, -1, sizeof(RX) );
 
       for(int i = 0; i < N; i++){
-        rect_list[i] = rect_t(A[i], B[i]);
+        rect_list[i] = rect_t( i, A[i], B[i]);
       }
 
       sort( rect_list.begin(), rect_list.begin()+N );
     }
 
-    bool overlap( int y, int x, int rot ){
-    }
 
     ll calcScore(){
       vector<int> YS = enumerateCoordinates( LY, RY );
@@ -129,6 +130,19 @@ class RectanglesAndHoles {
       memset( field, UNKNOWN, sizeof(field) );
       int ysize = YS.size();
       int xsize = XS.size();
+
+      for(int i = 0; i < N; i++){
+        int fromY = lower_bound( YS.begin(), YS.end(), LY[i] ) - YS.begin();
+        int fromX = lower_bound( XS.begin(), XS.end(), LX[i] ) - XS.begin();
+        int   toY = lower_bound( YS.begin(), YS.end(), RY[i] ) - YS.begin();
+        int   toX = lower_bound( XS.begin(), XS.end(), RX[i] ) - XS.begin();
+
+        for(int y = fromY; y < toY; y++){
+          for(int x = fromX; x < toX; x++){
+            field[y][x] = OBSTACLE;
+          }
+        }
+      }
 
       int cells = (ysize-1) * (xsize-1);
 
@@ -180,10 +194,24 @@ class RectanglesAndHoles {
       compCnt--;
 
       fprintf( stderr, "compCnt = %d\n", compCnt );
-      fprintf( stderr, "totArea = %d\n", totArea );
+      fprintf( stderr, "totArea = %lld\n", totArea );
       fprintf( stderr, "Current Score = %lld\n", totArea * compCnt * compCnt );
 
       return totArea * compCnt * compCnt;
+    }
+
+    bool overlap( int a, int b, int c, int d ){
+      return max( a, c ) < min( b, d );
+    }
+
+    bool checkOverLap( int ly, int lx, int ry, int rx ){
+      for(int i = 0; i < setCnt; i++){
+        if( overlap( LY[i], RY[i], ly, ry ) && overlap( LX[i], RX[i], lx, rx ) ){
+          return false;
+        }
+      }
+
+      return true;
     }
 
     void setRect( int id, int y, int x, int rot ){
@@ -196,11 +224,10 @@ class RectanglesAndHoles {
     vector<int> enumerateCoordinates( int *A, int *B ){
       int min_value = INT_MAX;
       int max_value = INT_MIN;
-      int size = turn;
 
       set<int> coords;
 
-      for(int i = 0; i <= size; i++){
+      for(int i = 0; i <= setCnt; i++){
         max_value = max( max_value, max( A[i], B[i] ) );
         min_value = min( min_value, min( A[i], B[i] ) );
 
