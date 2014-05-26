@@ -19,6 +19,7 @@ typedef long long ll;
 
 const int UNKNOWN = -1;
 const int OBSTACLE = -2;
+const int EMPTY = -3;
 
 const int MAX_N = 1000;
 
@@ -67,7 +68,11 @@ struct rect_t {
 
 int N, setCnt;
 
+vector<int> YS;
+vector<int> XS;
+
 vector<rect_t> rect_list(MAX_N);
+vector< vector<int> > field;
 
 class RectanglesAndHoles {
   public:
@@ -120,16 +125,24 @@ class RectanglesAndHoles {
       sort( rect_list.begin(), rect_list.begin()+N );
     }
 
+    void gravity( int id, int rot ){
+      int fromY = lower_bound( YS.begin(), YS.end(), LY[id] ) - YS.begin();
+      int fromX = lower_bound( XS.begin(), XS.end(), LX[id] ) - XS.begin();
 
-    ll calcScore(){
-      vector<int> YS = enumerateCoordinates( LY, RY );
-      vector<int> XS = enumerateCoordinates( LX, RX );
+      vector< vector<int> > tmp_field;
 
-      int field[YS.size()-1][XS.size()-1];
+      tmp_field = field;
 
-      memset( field, UNKNOWN, sizeof(field) );
-      int ysize = YS.size();
-      int xsize = XS.size();
+      while( field[fromY][fromX] != EMPTY ){
+      }
+    }
+
+    void createField(){
+      YS = enumerateCoordinates( LY, RY );
+      XS = enumerateCoordinates( LX, RX );
+
+      vector< vector<int> > new_field(YS.size()-1, vector<int>(XS.size()-1, UNKNOWN ));
+      field = new_field;
 
       for(int i = 0; i < N; i++){
         int fromY = lower_bound( YS.begin(), YS.end(), LY[i] ) - YS.begin();
@@ -139,10 +152,22 @@ class RectanglesAndHoles {
 
         for(int y = fromY; y < toY; y++){
           for(int x = fromX; x < toX; x++){
-            field[y][x] = OBSTACLE;
+            if( y == 0 || y == toY-1 || x == 0 || x == toX-1 ){
+              field[y][x] = EMPTY;
+            }else{
+              field[y][x] = OBSTACLE;
+            }
           }
         }
       }
+    }
+
+    ll calcScore(){
+
+      createField();
+
+      int ysize = YS.size();
+      int xsize = XS.size();
 
       int cells = (ysize-1) * (xsize-1);
 
