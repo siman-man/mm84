@@ -141,7 +141,7 @@ class RectanglesAndHoles {
       YS = enumerateCoordinates( LY, RY );
       XS = enumerateCoordinates( LX, RX );
 
-      vector< vector<int> > new_field(YS.size()-1, vector<int>(XS.size()-1, UNKNOWN ));
+      vector< vector<int> > new_field(YS.size(), vector<int>(XS.size(), UNKNOWN ));
       field = new_field;
 
       for(int i = 0; i < N; i++){
